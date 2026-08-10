@@ -1,55 +1,199 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi Web UI</title>
-  <style>
+<style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      padding: 0;
-      background-color: #f4f4f9;
+        font-family: 'Inter', sans-serif;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        touch-action: manipulation;
+        background-color: #f0fdf4;
     }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
     }
-    button {
-      padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+    ::-webkit-scrollbar-track {
+        background: #f1f5f9;
     }
-    button:hover {
-      background-color: #0056b3;
+    ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
     }
-    #output {
-      margin-top: 15px;
-      padding: 10px;
-      background: #e9ecef;
-      border-radius: 4px;
+    ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
     }
-  </style>
-</head>
-<body>
 
-  <div class="container">
-    <h2>Dashboard Utama</h2>
-    <p>Klik tombol di bawah untuk memproses data melalui backend.</p>
-    <button onclick="kirimData()">Proses Data</button>
-    <div id="output">Status: Menunggu aksi...</div>
-  </div>
+    .exam-watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-25deg);
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: rgba(220, 38, 38, 0.06);
+        pointer-events: none;
+        z-index: 1;
+        white-space: nowrap;
+        text-align: center;
+        line-height: 1.3;
+    }
 
-  <script src="app.js">
-   
-    const GAS_API_URL = " https://script.google.com/macros/s/AKfycbxl6w1hxUxpz0q-qV31aZSN5SfFpm4rQ-ST34igvhHKrJqe2Lq6rqnhnMyFpumcLHCu/exec";
-  </script>
-</body>
-</html>
+    @keyframes timerPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.85; transform: scale(1.03); }
+    }
+    .timer-warning {
+        animation: timerPulse 1s infinite;
+        background-color: #fef2f2 !important;
+        color: #dc2626 !important;
+        border-color: #fca5a5 !important;
+    }
+</style>
+<!-- Top Navigation Bar -->
+<header id="top-nav" class="bg-gradient-to-r from-teal-700 via-emerald-600 to-emerald-500 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="app.renderDashboard()">
+            <div class="bg-white/20 p-2 rounded-xl backdrop-blur-md flex items-center justify-center shadow-inner">
+                <i class="fa-solid fa-shield-halved text-2xl text-amber-300"></i>
+            </div>
+            <div>
+                <h1 class="font-black text-lg tracking-tight leading-tight">CBT MOBILE SAFE</h1>
+                <p class="text-xs text-emerald-100 flex items-center gap-1.5 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                    <span id="system-status-text">Sistem Keamanan Ujian Aktif</span>
+                </p>
+            </div>
+        </div>
+
+        <div id="user-bar" class="hidden flex items-center space-x-3">
+            <div class="text-right hidden sm:block">
+                <div id="user-display-name" class="font-bold text-sm leading-tight text-white">Pengguna</div>
+                <div id="user-display-role" class="text-[11px] text-emerald-100 font-medium">Peran</div>
+            </div>
+            <button onclick="app.logout()" class="bg-red-500/90 hover:bg-red-600 active:scale-95 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow text-white">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Keluar</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main id="app-container" class="max-w-7xl mx-auto w-full px-3 py-4 flex-grow">
+    <!-- Content Injected Dynamically -->
+</main>
+
+<!-- Custom Toast Container -->
+<div id="toast-container" class="fixed top-16 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- Security Violation & Exam Lock Modal -->
+<div id="security-modal" class="hidden fixed inset-0 z-50 bg-red-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center shadow-2xl border-4 border-red-500 space-y-4">
+        <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+            <h3 class="text-xl font-black text-red-600" id="sec-modal-title">PELANGGARAN DITETAPKAN!</h3>
+            <p class="text-xs text-slate-600 mt-1" id="sec-modal-desc">
+                Terdeteksi berpindah aplikasi, membuka tab lain, atau memperkecil layar.
+            </p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-2xl text-xs text-left font-medium space-y-1">
+            <div class="font-bold flex items-center justify-between">
+                <span><i class="fa-solid fa-shield-virus text-red-500 mr-1"></i> Pelanggaran Keamanan:</span>
+                <span id="violation-count-badge" class="bg-red-600 text-white px-2 py-0.5 rounded-full font-black text-xs">0 / 3</span>
+            </div>
+            <p class="text-[11px] text-amber-800">Bila mencapai 3 kali pelanggaran, sistem mengunci & menyerahkan ujian otomatis.</p>
+        </div>
+        <button id="sec-modal-btn" onclick="app.closeSecurityModal()" class="w-full bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold py-3.5 rounded-xl shadow-lg transition text-xs">
+            Saya Mengerti & Kembali Ujian
+        </button>
+    </div>
+</div>
+
+<!-- Student Token Verification Modal -->
+<div id="token-modal" class="hidden fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center shadow-2xl border border-slate-100 space-y-4">
+        <div class="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-sm">
+            <i class="fa-solid fa-key"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-black text-slate-800">Verifikasi Token Ujian</h3>
+            <p id="token-modal-pkg-name" class="text-xs font-bold text-emerald-600 mt-0.5">Nama Paket Soal</p>
+            <p id="token-modal-meta" class="text-xs text-slate-500">Mata Pelajaran • Durasi</p>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left space-y-1.5">
+            <label class="block text-xs font-bold text-slate-700">Masukkan Token Ujian Resmi Guru:</label>
+            <input type="text" id="token-input-field" placeholder="Contoh: MTK88" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-center text-xl font-black tracking-widest text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none uppercase">
+        </div>
+
+        <div class="flex gap-2 pt-1">
+            <button onclick="app.closeTokenModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition">Batal</button>
+            <button onclick="app.submitExamToken()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl text-xs shadow-md transition">Mulai Ujian</button>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Modal -->
+<div id="alert-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4">
+        <div id="alert-modal-icon" class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-xl">
+            <i class="fa-solid fa-circle-info"></i>
+        </div>
+        <div>
+            <h4 id="alert-modal-title" class="font-extrabold text-slate-800 text-base">Pemberitahuan</h4>
+            <p id="alert-modal-body" class="text-xs text-slate-600 mt-1">Pesan detail...</p>
+        </div>
+        <button onclick="app.closeAlertModal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow transition">
+            Tutup
+        </button>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4">
+        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-xl">
+            <i class="fa-solid fa-circle-question"></i>
+        </div>
+        <div>
+            <h4 id="confirm-modal-title" class="font-extrabold text-slate-800 text-base">Konfirmasi</h4>
+            <p id="confirm-modal-body" class="text-xs text-slate-600 mt-1">Apakah Anda yakin?</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="app.handleConfirmChoice(false)" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">Batal</button>
+            <button onclick="app.handleConfirmChoice(true)" id="confirm-modal-yes-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow transition">Ya, Lanjutkan</button>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox Modal -->
+<div id="lightbox-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onclick="app.closeLightbox()">
+    <div class="relative max-w-4xl w-full text-center">
+        <img id="lightbox-img" src="" class="max-h-[85vh] max-w-full mx-auto rounded-2xl shadow-2xl object-contain">
+        <p class="text-white text-xs mt-3 font-medium">Klik di mana saja untuk menutup pratinjau gambar</p>
+    </div>
+</div>
+
+<div id="watermark-overlay" class="exam-watermark hidden">
+    PROCTORING ACTIVE • CBT MOBILE SAFE
+</div>
+
+<footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div>&copy; 2026 CBT Mobile Safe Engine v6.0 • Support Multi-Format Import (Excel, PDF, Word)</div>
+        <div class="flex gap-3 text-slate-400">
+            <span><i class="fa-solid fa-mobile-screen"></i> Mobile Ready</span>
+            <span><i class="fa-solid fa-lock text-emerald-500"></i> Anti-Cheat Active</span>
+        </div>
+    </div>
+</footer>
+
+<!-- Google Apps Script Execution URL Config -->
+<script>
+    // Masukkan URL Web App Google Apps Script Anda jika menggunakan integrasi Spreadsheets
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwkYw4VAQcA6IJRT47UVIKCZBNKtw5lCIQeKK4T6xydSRwvvWruWMVPVWnaDkWON_wp/exec"; 
+</script>
+<!-- Include App Logic -->
+<script src="app.js"></script>
